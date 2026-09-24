@@ -79,9 +79,10 @@ Install selected stages only:
 ./install.sh --no-enable
 ./install.sh --placement center
 ./install.sh --keep-legacy
+./install.sh --local-plugin
 ```
 
-Use `./install.sh --help` for the complete option list.
+Use `./install.sh --help` for the complete option list. The default full-installer path installs the public plugin with `omarchy plugin add`, so it remains Git-managed and supports `omarchy plugin update`. Maintainers can pass `--local-plugin` to install the current checkout instead.
 
 ## Authentication
 

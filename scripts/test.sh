@@ -102,6 +102,8 @@ staging_after="$(find "${TMPDIR:-/tmp}" -maxdepth 1 -type d -name 'omwhop-stage.
 [[ "$staging_before" == "$staging_after" ]] || fail "installer dry-run created staging directories"
 grep -Fq 'run rm -rf -- "$staging/.git"' "$ROOT/install.sh" \
   || fail "local plugin install does not strip source .git metadata"
+grep -Fq 'omarchy plugin add "$REPOSITORY_URL" --enable --yes' "$ROOT/install.sh" \
+  || fail "public installer does not use Omarchy's Git-managed plugin flow"
 pass "installer staging safety"
 
 [[ -f "$ROOT/CHANGELOG.md" ]] || fail "CHANGELOG.md is missing"

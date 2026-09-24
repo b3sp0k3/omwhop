@@ -18,6 +18,7 @@ SKIP_OMWHOP_SKILL=0
 NO_ENABLE=0
 KEEP_LEGACY=0
 DRY_RUN=0
+LOCAL_PLUGIN=0
 PLACEMENT="right"
 
 usage() {
@@ -36,6 +37,7 @@ Options:
   --placement SECTION     Bar placement: left, center, or right (default: right)
   --dry-run               Print actions without changing files or configuration
   --keep-legacy           Keep a detected local.omwhop installation after migration
+  --local-plugin          Install this checkout instead of cloning the public repo
   -h, --help              Show this help
 
 Environment overrides:
@@ -56,6 +58,7 @@ while (($#)); do
     --skip-omwhop-skill) SKIP_OMWHOP_SKILL=1 ;;
     --no-enable) NO_ENABLE=1 ;;
     --keep-legacy) KEEP_LEGACY=1 ;;
+    --local-plugin) LOCAL_PLUGIN=1 ;;
     --placement)
       [[ $# -ge 2 ]] || { echo "error: --placement requires a value" >&2; exit 2; }
       PLACEMENT="$2"
@@ -171,28 +174,62 @@ install_plugin() {
       echo "error: Omarchy is required to install the plugin" >&2
       exit 1
     }
-    [[ -f "$REPO_ROOT/manifest.json" ]] || {
-      echo "error: run this installer from the OmWhop repository" >&2
-      exit 1
-    }
-    omarchy plugin validate "$REPO_ROOT"
   fi
 
-  log "Installing the OmWhop plugin at $PLUGIN_DEST"
-  copy_tree "$REPO_ROOT" "$PLUGIN_DEST"
+  if ((LOCAL_PLUGIN)); then
+    if ! ((DRY_RUN)); then
+      [[ -f "$REPO_ROOT/manifest.json" ]] || {
+        echo "error: run this installer from the OmWhop repository" >&2
+        exit 1
+      }
+      omarchy plugin validate "$REPO_ROOT"
+    fi
 
-  if ((DRY_RUN)); then
-    printf '    $ omarchy-shell shell rescanPlugins\n'
-    if ((!NO_ENABLE)); then
-      printf '    $ omarchy plugin enable %q %q\n' "$PLUGIN_ID" "$PLACEMENT"
+    log "Installing the local OmWhop checkout at $PLUGIN_DEST"
+    copy_tree "$REPO_ROOT" "$PLUGIN_DEST"
+
+    if ((DRY_RUN)); then
+      printf '    $ omarchy-shell shell rescanPlugins\n'
+      if ((!NO_ENABLE)); then
+        printf '    $ omarchy plugin enable %q %q\n' "$PLUGIN_ID" "$PLACEMENT"
+      fi
+      return
+    fi
+
+    run omarchy-shell shell rescanPlugins
+    if ((NO_ENABLE)); then
+      log "Plugin installed but not enabled"
+    else
+      run omarchy plugin enable "$PLUGIN_ID" "$PLACEMENT"
     fi
     return
   fi
 
-  run omarchy-shell shell rescanPlugins
-  if ((NO_ENABLE)); then
-    log "Plugin installed but not enabled"
+  if ((DRY_RUN)); then
+    if [[ -d "$PLUGIN_DEST/.git" ]]; then
+      printf '    $ omarchy plugin update %q --yes\n' "$PLUGIN_ID"
+    else
+      printf '    $ omarchy plugin add %q --enable --yes\n' "$REPOSITORY_URL"
+    fi
+    return
+  fi
+
+  if [[ -d "$PLUGIN_DEST/.git" ]]; then
+    log "Updating the Git-managed OmWhop plugin"
+    run omarchy plugin update "$PLUGIN_ID" --yes
+  elif [[ -e "$PLUGIN_DEST" || -L "$PLUGIN_DEST" ]]; then
+    log "Replacing the non-Git OmWhop plugin with the public Git checkout"
+    omarchy plugin remove "$PLUGIN_ID" --yes
+    run omarchy plugin add "$REPOSITORY_URL" --enable --yes
+  elif ((NO_ENABLE)); then
+    log "Installing the OmWhop plugin without enabling it"
+    run omarchy plugin add "$REPOSITORY_URL" --yes
   else
+    log "Installing the OmWhop plugin from $REPOSITORY_URL"
+    run omarchy plugin add "$REPOSITORY_URL" --enable --yes
+  fi
+
+  if ((!NO_ENABLE)); then
     run omarchy plugin enable "$PLUGIN_ID" "$PLACEMENT"
   fi
 }
