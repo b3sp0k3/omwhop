@@ -6,7 +6,7 @@ The first release provides:
 
 - Whop CLI installation and version detection
 - Authentication and selected-business status
-- Product, plan, active-membership, and app counts
+- Product, plan, active-membership, and app counts (with `+` when the first page is capped)
 - Ready Economic Intelligence recommendations when available
 - Links to common Whop dashboard areas
 - A separate, small `omwhop` integration skill for agents

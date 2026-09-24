@@ -306,7 +306,10 @@ Panel {
                       anchors.horizontalCenter: parent.horizontalCenter
                       text: {
                         var value = Model.count(root.whopState, modelData.key)
-                        return value === null ? "—" : String(value)
+                        if (value === null) return "—"
+                        var lowerBound = root.whopState.countsAreLowerBounds
+                          && root.whopState.countsAreLowerBounds[modelData.key] === true
+                        return String(value) + (lowerBound ? "+" : "")
                       }
                       color: root.foreground
                       font.family: root.fontFamily

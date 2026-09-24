@@ -1,7 +1,7 @@
 ---
 name: omwhop
 description: "Operate and troubleshoot the OmWhop Omarchy shell plugin. Use when the user mentions OmWhop, the OmWhop bar widget or panel, local.omwhop, Whop status in Omarchy, refreshing or opening OmWhop, or diagnosing the plugin. For general Whop business operations, use the official whop skill."
-requires_bin: omwhop
+requires_bin: whop
 ---
 
 # OmWhop
@@ -39,12 +39,12 @@ Omarchy bar
 
 ## Troubleshooting order
 
-1. Run `~/.config/omarchy/plugins/local.omwhop/scripts/omwhop status` directly and inspect its normalized JSON.
+1. Run `~/.config/omarchy/plugins/local.omwhop/scripts/omwhop status` directly and inspect its normalized JSON. The plugin invokes this bundled adapter; it is not a global executable.
 2. Run `command -v whop && whop --version`.
 3. Run `whop auth status --format json`.
 4. Confirm the selected business with `whop auth account --list true --format json`.
 5. Run `omarchy plugin validate <plugin-directory>`.
-6. Run `qmllint -I "$OMARCHY_PATH/shell" <BarWidget.qml> <Panel.qml>`.
+6. Run `./scripts/test.sh` in the source checkout, or run `qmllint` with an import root that mirrors Omarchy's `qs/Ui` and `qs/Commons` modules.
 7. Check `omarchy plugin list --json` for `local.omwhop`.
 8. Check Quickshell logs for QML or process errors.
 

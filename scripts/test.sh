@@ -35,6 +35,7 @@ jq -e '
   (.installed | type == "boolean") and
   (.loggedIn | type == "boolean") and
   (.counts | type == "object") and
+  (.countsAreLowerBounds | type == "object") and
   (.recommendations | type == "array") and
   (.warnings | type == "array")
 ' <<<"$adapter_output" >/dev/null || fail "adapter status output has an invalid shape"

@@ -10,6 +10,7 @@ function emptyState() {
     "profile": "",
     "account": null,
     "counts": {},
+    "countsAreLowerBounds": {},
     "recommendations": [],
     "warnings": []
   }
@@ -38,7 +39,8 @@ function count(state, key) {
 function countLabel(state, key) {
   var value = count(state, key)
   if (value === null) return "—"
-  return String(value) + (value === 1 ? " item" : " items")
+  var suffix = state && state.countsAreLowerBounds && state.countsAreLowerBounds[key] === true ? "+" : ""
+  return String(value) + suffix + (value === 1 && suffix === "" ? " item" : " items")
 }
 
 function accountTitle(state) {

@@ -94,17 +94,21 @@ def whop_version() -> str:
     return first_line[0].strip() if first_line else ""
 
 
-def list_count(arguments: list[str], timeout: int = DEFAULT_TIMEOUT) -> tuple[int | None, str | None]:
+def list_count(
+    arguments: list[str], timeout: int = DEFAULT_TIMEOUT
+) -> tuple[int | None, bool | None, str | None]:
     try:
         payload = run_whop(arguments, timeout=timeout, allow_api_error=True)
     except AdapterError as error:
-        return None, str(error)
+        return None, None, str(error)
     if not isinstance(payload, dict):
-        return None, "Whop returned an unexpected response."
+        return None, None, "Whop returned an unexpected response."
     data = payload.get("data")
     if not isinstance(data, list):
-        return None, "Whop returned an unexpected list response."
-    return len(data), None
+        return None, None, "Whop returned an unexpected list response."
+    page_info = payload.get("page_info")
+    has_more = bool(page_info.get("has_next_page")) if isinstance(page_info, dict) else None
+    return len(data), has_more, None
 
 
 def recommendation_summary(payload: Any) -> tuple[list[dict[str, str]], str | None]:
@@ -176,6 +180,7 @@ def build_status(timeout: int) -> dict[str, Any]:
         "profile": "",
         "account": None,
         "counts": {},
+        "countsAreLowerBounds": {},
         "recommendations": [],
         "warnings": [],
     }
@@ -224,8 +229,9 @@ def build_status(timeout: int) -> dict[str, Any]:
     }
 
     for label, arguments in list_specs.items():
-        count, warning = list_count(arguments, timeout=timeout)
+        count, has_more, warning = list_count(arguments, timeout=timeout)
         base["counts"][label] = count
+        base["countsAreLowerBounds"][label] = has_more
         if warning:
             base["warnings"].append(f"{label}: {warning}")
 
@@ -293,6 +299,7 @@ def main() -> int:
                     "profile": "",
                     "account": None,
                     "counts": {},
+                    "countsAreLowerBounds": {},
                     "recommendations": [],
                     "warnings": [str(error)],
                 },
