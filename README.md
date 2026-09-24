@@ -43,6 +43,7 @@ The full local installer is safe to rerun. It:
 3. Installs the small `omwhop` integration skill under `~/.agents/skills/omwhop`.
 4. Validates and installs the plugin under `~/.config/omarchy/plugins/local.omwhop`.
 5. Enables the bar widget in the right section and asks the running shell to rescan plugins.
+6. Stores replacement backups under `${XDG_STATE_HOME:-~/.local/state}/omwhop/backups`, outside directories scanned for plugins or skills.
 
 Preview every action without changing anything:
 
@@ -88,7 +89,7 @@ OmWhop follows the [Omarchy plugin development guide](https://plugins.omarchy.or
 - The plugin declares `MIT` licensing, includes this README and `LICENSE`, and has no symlinks.
 - No second Quickshell process, privileged operation, network listener, or packaged Omarchy modification is used.
 
-The local installer stages copies outside the live plugin directory, validates the checkout, then moves it into the user-owned plugin directory and enables it through Omarchy IPC. This prevents a partially copied folder from being discovered as a second plugin. It does not modify `/usr/share/omarchy/`. A published checkout should use `omarchy plugin add <git-url> --enable`, which performs the supported clone, validation, rediscovery, and enable flow.
+The local installer stages copies outside the live plugin directory, validates the checkout, then moves it into the user-owned plugin directory and enables it through Omarchy IPC. Staging and backups remain outside plugin and skill discovery directories, preventing partial copies or old versions from being rediscovered. It does not modify `/usr/share/omarchy/`. A published checkout should use `omarchy plugin add <git-url> --enable`, which performs the supported clone, validation, rediscovery, and enable flow.
 
 ## Security and mutation boundary
 

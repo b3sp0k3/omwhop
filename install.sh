@@ -6,6 +6,7 @@ WHOP_INSTALLER_URL="${OMWHOP_WHOP_INSTALLER_URL:-https://whop.com/install.sh}"
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DEST="${OMWHOP_PLUGIN_DEST:-$HOME/.config/omarchy/plugins/$PLUGIN_ID}"
 SKILL_DEST="${OMWHOP_SKILL_DEST:-$HOME/.agents/skills/omwhop}"
+BACKUP_ROOT="${OMWHOP_BACKUP_ROOT:-${XDG_STATE_HOME:-$HOME/.local/state}/omwhop/backups}"
 OMARCHY_PATH="${OMARCHY_PATH:-/usr/share/omarchy}"
 
 SKIP_CLI=0
@@ -36,6 +37,7 @@ Options:
 Environment overrides:
   OMWHOP_PLUGIN_DEST      Plugin destination directory
   OMWHOP_SKILL_DEST       OmWhop skill destination directory
+  OMWHOP_BACKUP_ROOT      Backup root outside discovery directories
   OMWHOP_WHOP_INSTALLER_URL
                           Official installer URL (default: https://whop.com/install.sh)
 EOF
@@ -90,7 +92,11 @@ copy_tree() {
   run cp -a -- "$source/." "$staging/"
 
   if [[ -e "$destination" || -L "$destination" ]]; then
-    local backup="${destination}.backup.$(date +%Y%m%d%H%M%S)"
+    local component
+    local backup
+    component="$(basename -- "$destination")"
+    backup="$BACKUP_ROOT/$component.$(date +%Y%m%d%H%M%S).$$"
+    run mkdir -p -- "$BACKUP_ROOT"
     run mv -- "$destination" "$backup"
     log "Backed up $destination to $backup"
   fi
