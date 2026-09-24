@@ -225,7 +225,7 @@ The first public release is `v0.1.0`. Release archives are deterministic and inc
 
 ```bash
 ./scripts/package.sh 0.1.0
-sha256sum --check dist/omwhop-v0.1.0.tar.gz.sha256
+(cd dist && sha256sum --check omwhop-v0.1.0.tar.gz.sha256)
 ```
 
 GitHub releases attach:
