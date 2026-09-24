@@ -19,11 +19,11 @@ The first release provides:
 
 - Omarchy 4.0.4 or another compatible Quattro-based Omarchy installation
 - Linux on `x86_64`, `amd64`, `aarch64`, or `arm64`
-- `bash`, `curl`, `python3`, and standard Arch user tools
+- `bash`, `npm`, `python3`, and standard Arch user tools
 - `qt6-tools` for the local QML test suite
 - Git if the project will later be published as an Omarchy plugin repository
 
-The Whop CLI is installed to `~/.local/bin` by Whop's official installer. No `sudo` is used.
+The Whop CLI is installed globally through npm's package-manager flow when it is missing. The plugin itself does not request elevated privileges.
 
 ## Install
 
@@ -42,7 +42,7 @@ omarchy plugin add https://github.com/b3sp0k3/omwhop.git --enable
 Plugin-only installation does not install the Whop CLI or either agent skill. Install those separately when needed:
 
 ```bash
-curl -fsSL https://whop.com/install.sh | sh
+npm install --global @whop/cli
 whop skills add
 ```
 
@@ -56,7 +56,7 @@ cd omwhop
 
 The full local installer is safe to rerun. It:
 
-1. Installs the official Whop CLI with `https://whop.com/install.sh` when needed.
+1. Installs the official `@whop/cli` npm package when needed.
 2. Runs `whop skills add` to install or refresh Whop's official agent skill.
 3. Installs the small `omwhop` integration skill under `~/.agents/skills/omwhop`.
 4. Validates and installs the plugin under `~/.config/omarchy/plugins/io.github.b3sp0k3.omwhop`.
@@ -121,7 +121,7 @@ omarchy plugin remove local.omwhop --yes
 
 ## Security and mutation boundary
 
-OmWhop is intentionally read-only in version 0.1.0. Its Python adapter invokes only these Whop reads:
+OmWhop is intentionally read-only in version 0.1.1. Its Python adapter invokes only these Whop reads:
 
 - `auth status`
 - `products list`
@@ -222,17 +222,17 @@ omwhop/
 
 ## Release
 
-The first public release is `v0.1.0`. Release archives are deterministic and include a SHA-256 checksum:
+The current public release is `v0.1.1`. Release archives are deterministic and include a SHA-256 checksum:
 
 ```bash
-./scripts/package.sh 0.1.0
-(cd dist && sha256sum --check omwhop-v0.1.0.tar.gz.sha256)
+./scripts/package.sh 0.1.1
+(cd dist && sha256sum --check omwhop-v0.1.1.tar.gz.sha256)
 ```
 
 GitHub releases attach:
 
-- `omwhop-v0.1.0.tar.gz`
-- `omwhop-v0.1.0.tar.gz.sha256`
+- `omwhop-v0.1.1.tar.gz`
+- `omwhop-v0.1.1.tar.gz.sha256`
 
 ## References
 

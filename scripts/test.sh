@@ -28,7 +28,7 @@ pass "adapter CLI"
 jq -e '
   .schemaVersion == 1 and
   .id == "io.github.b3sp0k3.omwhop" and
-  .version == "0.1.0" and
+  .version == "0.1.1" and
   .author == "b3sp0k3" and
   .license == "MIT" and
   .kinds == ["bar-widget"] and

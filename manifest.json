@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.b3sp0k3.omwhop",
   "name": "OmWhop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "b3sp0k3",
   "license": "MIT",
   "description": "Read-only Whop business status and recommendations for the Omarchy bar",

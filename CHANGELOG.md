@@ -2,6 +2,13 @@
 
 All notable changes to OmWhop are documented in this file.
 
+## [0.1.1] - 2026-09-24
+
+### Security
+
+- Replaced direct download-and-execute Whop CLI installation with npm's package-manager flow for `@whop/cli`.
+- Kept the plugin runtime read-only and free of elevated privilege requests.
+
 ## [0.1.0] - 2026-09-24
 
 ### Added

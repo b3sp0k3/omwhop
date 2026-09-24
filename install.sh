@@ -4,7 +4,6 @@ set -euo pipefail
 PLUGIN_ID="io.github.b3sp0k3.omwhop"
 LEGACY_PLUGIN_ID="local.omwhop"
 REPOSITORY_URL="${OMWHOP_REPOSITORY_URL:-https://github.com/b3sp0k3/omwhop.git}"
-WHOP_INSTALLER_URL="${OMWHOP_WHOP_INSTALLER_URL:-https://whop.com/install.sh}"
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DEST="${OMWHOP_PLUGIN_DEST:-$HOME/.config/omarchy/plugins/$PLUGIN_ID}"
 SKILL_DEST="${OMWHOP_SKILL_DEST:-$HOME/.agents/skills/omwhop}"
@@ -45,8 +44,6 @@ Environment overrides:
   OMWHOP_PLUGIN_DEST      Plugin destination directory
   OMWHOP_SKILL_DEST       OmWhop skill destination directory
   OMWHOP_BACKUP_ROOT      Backup root outside discovery directories
-  OMWHOP_WHOP_INSTALLER_URL
-                          Official installer URL (default: https://whop.com/install.sh)
 EOF
 }
 
@@ -127,15 +124,15 @@ install_cli() {
   if command -v whop >/dev/null 2>&1; then
     log "Whop CLI is already installed; checking it"
   else
-    log "Installing the official Whop CLI"
+    log "Installing the official Whop CLI through npm"
     if ((DRY_RUN)); then
-      printf '    $ curl -fsSL %q | sh\n' "$WHOP_INSTALLER_URL"
+      printf '    $ npm install --global @whop/cli\n'
     else
-      command -v curl >/dev/null 2>&1 || {
-        echo "error: curl is required to install Whop" >&2
+      command -v npm >/dev/null 2>&1 || {
+        echo "error: npm is required to install @whop/cli" >&2
         exit 1
       }
-      curl -fsSL "$WHOP_INSTALLER_URL" | sh
+      npm install --global @whop/cli
     fi
   fi
 
