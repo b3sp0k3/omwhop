@@ -1,0 +1,307 @@
+#!/usr/bin/env python3
+"""Read-only status adapter for the OmWhop Omarchy plugin.
+
+The QML plugin never executes `whop` directly. It invokes this small,
+allow-listed adapter, receives one JSON object, and renders that object.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import shutil
+import subprocess
+import sys
+from datetime import datetime, timezone
+from typing import Any
+
+
+DEFAULT_TIMEOUT = 12
+MAX_SUMMARY_ITEMS = 5
+
+
+class AdapterError(RuntimeError):
+    """A safe, user-facing adapter error."""
+
+
+def run_whop(
+    arguments: list[str],
+    *,
+    timeout: int = DEFAULT_TIMEOUT,
+    allow_api_error: bool = False,
+) -> Any:
+    executable = shutil.which("whop")
+    if not executable:
+        raise AdapterError("Whop CLI is not installed or is not on PATH.")
+
+    command = [executable, *arguments, "--format", "json"]
+    try:
+        completed = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise AdapterError(f"Whop timed out while running {arguments[0]}.") from error
+    except OSError as error:
+        raise AdapterError("Whop CLI could not be started.") from error
+
+    raw = completed.stdout.strip()
+    if not raw:
+        detail = completed.stderr.strip().splitlines()
+        message = detail[-1] if detail else f"Whop exited with status {completed.returncode}."
+        if allow_api_error and completed.returncode != 0:
+            return {"_error": message, "_returncode": completed.returncode}
+        raise AdapterError(message)
+
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as error:
+        raise AdapterError("Whop returned output that was not valid JSON.") from error
+
+    if isinstance(value, dict) and value.get("code") and value.get("message"):
+        if allow_api_error:
+            return {
+                "_error": str(value.get("message")),
+                "_code": str(value.get("code")),
+                "_returncode": completed.returncode,
+            }
+        raise AdapterError(str(value.get("message")))
+
+    if completed.returncode != 0:
+        raise AdapterError(f"Whop exited with status {completed.returncode}.")
+
+    return value
+
+
+def whop_version() -> str:
+    executable = shutil.which("whop")
+    if not executable:
+        return ""
+    try:
+        completed = subprocess.run(
+            [executable, "--version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    first_line = (completed.stdout or completed.stderr).strip().splitlines()
+    return first_line[0].strip() if first_line else ""
+
+
+def list_count(arguments: list[str], timeout: int = DEFAULT_TIMEOUT) -> tuple[int | None, str | None]:
+    try:
+        payload = run_whop(arguments, timeout=timeout, allow_api_error=True)
+    except AdapterError as error:
+        return None, str(error)
+    if not isinstance(payload, dict):
+        return None, "Whop returned an unexpected response."
+    data = payload.get("data")
+    if not isinstance(data, list):
+        return None, "Whop returned an unexpected list response."
+    return len(data), None
+
+
+def recommendation_summary(payload: Any) -> tuple[list[dict[str, str]], str | None]:
+    if not isinstance(payload, dict):
+        return [], "Whop returned an unexpected recommendations response."
+    if payload.get("_error"):
+        return [], str(payload.get("_error"))
+
+    rows = payload.get("data")
+    if not isinstance(rows, list):
+        return [], "Whop returned an unexpected recommendations list."
+
+    summaries: list[dict[str, str]] = []
+    for row in rows[:MAX_SUMMARY_ITEMS]:
+        if not isinstance(row, dict):
+            continue
+        title = ""
+        description = ""
+        priority = ""
+        status = ""
+
+        recommendation = row.get("recommendation")
+        if isinstance(recommendation, dict):
+            title = str(
+                recommendation.get("title")
+                or recommendation.get("name")
+                or recommendation.get("headline")
+                or ""
+            ).strip()
+            description = str(
+                recommendation.get("description")
+                or recommendation.get("summary")
+                or recommendation.get("details")
+                or ""
+            ).strip()
+            priority = str(recommendation.get("priority") or "").strip()
+            status = str(recommendation.get("status") or "").strip()
+
+        if not title:
+            title = str(row.get("title") or row.get("name") or row.get("headline") or "").strip()
+        if not description:
+            description = str(row.get("description") or row.get("summary") or "").strip()
+        if not priority:
+            priority = str(row.get("priority") or "").strip()
+        if not status:
+            status = str(row.get("status") or "").strip()
+
+        if title or description:
+            summaries.append(
+                {
+                    "title": title or "Recommendation",
+                    "description": description,
+                    "priority": priority,
+                    "status": status,
+                }
+            )
+
+    return summaries, None
+
+
+def build_status(timeout: int) -> dict[str, Any]:
+    generated_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    base: dict[str, Any] = {
+        "schemaVersion": 1,
+        "generatedAt": generated_at,
+        "installed": shutil.which("whop") is not None,
+        "cliVersion": whop_version(),
+        "loggedIn": False,
+        "profile": "",
+        "account": None,
+        "counts": {},
+        "recommendations": [],
+        "warnings": [],
+    }
+
+    if not base["installed"]:
+        return base
+
+    try:
+        auth = run_whop(["auth", "status"], timeout=timeout)
+    except AdapterError as error:
+        base["warnings"].append(str(error))
+        return base
+
+    if not isinstance(auth, dict):
+        base["warnings"].append("Whop returned an unexpected authentication response.")
+        return base
+
+    base["loggedIn"] = auth.get("loggedIn") is True
+    base["profile"] = str(auth.get("profile") or "")
+    account = auth.get("account")
+    if isinstance(account, dict):
+        base["account"] = {
+            "id": str(account.get("id") or ""),
+            "title": str(account.get("title") or "Whop business"),
+            "route": str(account.get("route") or ""),
+        }
+
+    if not base["loggedIn"] or not isinstance(account, dict) or not account.get("id"):
+        return base
+
+    account_id = str(account["id"])
+    list_specs = {
+        "products": ["products", "list", "--account_id", account_id, "--first", "100"],
+        "plans": ["plans", "list", "--account_id", account_id, "--first", "100"],
+        "activeMemberships": [
+            "memberships",
+            "list",
+            "--account_id",
+            account_id,
+            "--status",
+            "active",
+            "--first",
+            "100",
+        ],
+        "apps": ["apps", "list", "--account_id", account_id, "--first", "100"],
+    }
+
+    for label, arguments in list_specs.items():
+        count, warning = list_count(arguments, timeout=timeout)
+        base["counts"][label] = count
+        if warning:
+            base["warnings"].append(f"{label}: {warning}")
+
+    try:
+        intelligence = run_whop(
+            [
+                "economic-intelligence",
+                "list",
+                "--account_id",
+                account_id,
+                "--status",
+                "ready",
+                "--first",
+                str(MAX_SUMMARY_ITEMS),
+            ],
+            timeout=timeout,
+            allow_api_error=True,
+        )
+        summaries, warning = recommendation_summary(intelligence)
+        base["recommendations"] = summaries
+        if warning:
+            base["warnings"].append(f"recommendations: {warning}")
+    except AdapterError as error:
+        base["warnings"].append(f"recommendations: {error}")
+
+    return base
+
+
+def parse_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="OmWhop read-only Whop CLI adapter")
+    parser.add_argument(
+        "command",
+        nargs="?",
+        choices=("status",),
+        default="status",
+        help="data command to run",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=DEFAULT_TIMEOUT,
+        help=f"per-command timeout in seconds (default: {DEFAULT_TIMEOUT})",
+    )
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_arguments()
+    timeout = max(1, min(args.timeout, 120))
+    try:
+        payload = build_status(timeout)
+        print(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
+        return 0
+    except AdapterError as error:
+        print(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "generatedAt": datetime.now(timezone.utc)
+                    .isoformat()
+                    .replace("+00:00", "Z"),
+                    "installed": shutil.which("whop") is not None,
+                    "cliVersion": whop_version(),
+                    "loggedIn": False,
+                    "profile": "",
+                    "account": None,
+                    "counts": {},
+                    "recommendations": [],
+                    "warnings": [str(error)],
+                },
+                separators=(",", ":"),
+                ensure_ascii=False,
+            )
+        )
+        return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

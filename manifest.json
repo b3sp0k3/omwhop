@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "local.omwhop",
+  "name": "OmWhop",
+  "version": "0.1.0",
+  "author": "OmWhop contributors",
+  "description": "Read-only Whop business status and recommendations for the Omarchy bar",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "OmWhop",
+    "description": "Whop status, inventory counts, recommendations, and safe links",
+    "category": "Business",
+    "defaultSection": "right",
+    "allowMultiple": false
+  }
+}
