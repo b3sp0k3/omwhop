@@ -86,10 +86,15 @@ copy_tree() {
   local source="$1"
   local destination="$2"
   local staging
-  staging="$(mktemp -d "${TMPDIR:-/tmp}/omwhop-stage.XXXXXX")"
+  if ((DRY_RUN)); then
+    staging="${TMPDIR:-/tmp}/omwhop-stage.dry-run.$$"
+  else
+    staging="$(mktemp -d "${TMPDIR:-/tmp}/omwhop-stage.XXXXXX")"
+  fi
 
   run mkdir -p "$(dirname -- "$destination")"
   run cp -a -- "$source/." "$staging/"
+  run rm -rf -- "$staging/.git"
 
   if [[ -e "$destination" || -L "$destination" ]]; then
     local component

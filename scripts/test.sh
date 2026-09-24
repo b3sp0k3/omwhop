@@ -93,6 +93,15 @@ ln -s "$OMARCHY_PATH/shell/Commons" "$import_root/qs/Commons"
   "$ROOT/Panel.qml" || fail "qmllint rejected the QML"
 pass "qmllint"
 
+bash -n install.sh scripts/test.sh
+staging_before="$(find "${TMPDIR:-/tmp}" -maxdepth 1 -type d -name 'omwhop-stage.*' -printf '%f\n' | sort)"
+"$ROOT/install.sh" --dry-run >/dev/null
+staging_after="$(find "${TMPDIR:-/tmp}" -maxdepth 1 -type d -name 'omwhop-stage.*' -printf '%f\n' | sort)"
+[[ "$staging_before" == "$staging_after" ]] || fail "installer dry-run created staging directories"
+grep -Fq 'run rm -rf -- "$staging/.git"' "$ROOT/install.sh" \
+  || fail "local plugin install does not strip source .git metadata"
+pass "installer staging safety"
+
 [[ "$(id -u)" -ne 0 ]] || fail "tests should not run as root"
 pass "non-root test context"
 
