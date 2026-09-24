@@ -27,7 +27,9 @@ pass "adapter CLI"
 
 jq -e '
   .schemaVersion == 1 and
-  .id == "local.omwhop" and
+  .id == "io.github.b3sp0k3.omwhop" and
+  .version == "0.1.0" and
+  .author == "b3sp0k3" and
   .license == "MIT" and
   .kinds == ["bar-widget"] and
   .entryPoints.barWidget == "BarWidget.qml" and
@@ -36,8 +38,8 @@ jq -e '
 ' "$ROOT/manifest.json" >/dev/null || fail "manifest does not satisfy the Omarchy bar-widget development contract"
 pass "Omarchy bar-widget manifest contract"
 
-module_names="$(grep -h 'moduleName: "local.omwhop"' "$ROOT/BarWidget.qml" "$ROOT/Panel.qml" | wc -l)"
-[[ "$module_names" -eq 2 ]] || fail "BarWidget.qml and Panel.qml must share moduleName local.omwhop"
+module_names="$(grep -h 'moduleName: "io.github.b3sp0k3.omwhop"' "$ROOT/BarWidget.qml" "$ROOT/Panel.qml" | wc -l)"
+[[ "$module_names" -eq 2 ]] || fail "BarWidget.qml and Panel.qml must share moduleName io.github.b3sp0k3.omwhop"
 pass "shared bar-widget module identity"
 
 for lifecycle in opened open close toggle closeForPopoutSwitch; do
@@ -46,8 +48,8 @@ for lifecycle in opened open close toggle closeForPopoutSwitch; do
 done
 pass "bar-widget panel lifecycle forwarding"
 
-ipc_targets="$(grep -R --include='*.qml' -c 'target: "local.omwhop"' "$ROOT" | awk -F: '{ total += $2 } END { print total + 0 }')"
-[[ "$ipc_targets" -eq 1 ]] || fail "expected exactly one local.omwhop IpcHandler, found $ipc_targets"
+ipc_targets="$(grep -R --include='*.qml' -c 'target: "io.github.b3sp0k3.omwhop"' "$ROOT" | awk -F: '{ total += $2 } END { print total + 0 }')"
+[[ "$ipc_targets" -eq 1 ]] || fail "expected exactly one io.github.b3sp0k3.omwhop IpcHandler, found $ipc_targets"
 pass "single IPC target"
 
 adapter_output="$($ROOT/scripts/omwhop status)"
@@ -93,7 +95,7 @@ ln -s "$OMARCHY_PATH/shell/Commons" "$import_root/qs/Commons"
   "$ROOT/Panel.qml" || fail "qmllint rejected the QML"
 pass "qmllint"
 
-bash -n install.sh scripts/test.sh
+bash -n install.sh scripts/*.sh
 staging_before="$(find "${TMPDIR:-/tmp}" -maxdepth 1 -type d -name 'omwhop-stage.*' -printf '%f\n' | sort)"
 "$ROOT/install.sh" --dry-run >/dev/null
 staging_after="$(find "${TMPDIR:-/tmp}" -maxdepth 1 -type d -name 'omwhop-stage.*' -printf '%f\n' | sort)"
@@ -101,6 +103,18 @@ staging_after="$(find "${TMPDIR:-/tmp}" -maxdepth 1 -type d -name 'omwhop-stage.
 grep -Fq 'run rm -rf -- "$staging/.git"' "$ROOT/install.sh" \
   || fail "local plugin install does not strip source .git metadata"
 pass "installer staging safety"
+
+[[ -f "$ROOT/CHANGELOG.md" ]] || fail "CHANGELOG.md is missing"
+[[ -f "$ROOT/SECURITY.md" ]] || fail "SECURITY.md is missing"
+[[ -x "$ROOT/scripts/package.sh" ]] || fail "scripts/package.sh is not executable"
+[[ -x "$ROOT/scripts/scan-secrets.sh" ]] || fail "scripts/scan-secrets.sh is not executable"
+grep -Fq 'https://github.com/b3sp0k3/omwhop.git' "$ROOT/README.md" \
+  || fail "README.md is missing the published repository URL"
+pass "release metadata"
+
+legacy_refs="$(git -C "$ROOT" grep -l 'local\.omwhop' -- ':!README.md' ':!install.sh' ':!scripts/test.sh' ':!CHANGELOG.md' ':!skill/**' 2>/dev/null || true)"
+[[ -z "$legacy_refs" ]] || fail "legacy plugin ID remains in active release files: $legacy_refs"
+pass "permanent release identity"
 
 [[ "$(id -u)" -ne 0 ]] || fail "tests should not run as root"
 pass "non-root test context"

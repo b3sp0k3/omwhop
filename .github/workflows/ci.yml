@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install validation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq ripgrep
+
+      - name: Check shell syntax
+        run: |
+          bash -n install.sh scripts/*.sh
+
+      - name: Validate Python adapter
+        run: |
+          python3 -m py_compile scripts/omwhop
+          rm -rf scripts/__pycache__
+
+      - name: Validate manifest contract
+        run: |
+          jq -e '
+            .schemaVersion == 1 and
+            .id == "io.github.b3sp0k3.omwhop" and
+            .version == "0.1.0" and
+            .author == "b3sp0k3" and
+            .license == "MIT" and
+            .kinds == ["bar-widget"] and
+            .entryPoints.barWidget == "BarWidget.qml" and
+            .barWidget.allowMultiple == false
+          ' manifest.json >/dev/null
+          test -f BarWidget.qml
+          test -f Panel.qml
+          test -f scripts/omwhop
+          test -x scripts/omwhop
+
+      - name: Check release identity
+        run: |
+          test "$(grep -RIl 'io.github.b3sp0k3.omwhop' --exclude-dir=.git . | wc -l)" -ge 4
+          test "$(grep -RIl 'https://github.com/b3sp0k3/omwhop.git' --exclude-dir=.git . | wc -l)" -ge 1
+
+      - name: Scan tracked content
+        run: ./scripts/scan-secrets.sh
+
+      - name: Check whitespace
+        run: git diff --check HEAD^

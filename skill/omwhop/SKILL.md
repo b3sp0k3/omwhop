@@ -1,6 +1,6 @@
 ---
 name: omwhop
-description: "Operate and troubleshoot the OmWhop Omarchy shell plugin. Use when the user mentions OmWhop, the OmWhop bar widget or panel, local.omwhop, Whop status in Omarchy, refreshing or opening OmWhop, or diagnosing the plugin. For general Whop business operations, use the official whop skill."
+description: "Operate and troubleshoot the OmWhop Omarchy shell plugin. Use when the user mentions OmWhop, the OmWhop bar widget or panel, io.github.b3sp0k3.omwhop, Whop status in Omarchy, refreshing or opening OmWhop, or diagnosing the plugin. For general Whop business operations, use the official whop skill."
 requires_bin: whop
 ---
 
@@ -39,18 +39,18 @@ Omarchy bar
 
 ## Troubleshooting order
 
-1. Run `~/.config/omarchy/plugins/local.omwhop/scripts/omwhop status` directly and inspect its normalized JSON. The plugin invokes this bundled adapter; it is not a global executable.
+1. Run `~/.config/omarchy/plugins/io.github.b3sp0k3.omwhop/scripts/omwhop status` directly and inspect its normalized JSON. The plugin invokes this bundled adapter; it is not a global executable. Pre-release installations used `local.omwhop`; migrate with the repository's `install.sh` before troubleshooting the permanent ID.
 2. Run `command -v whop && whop --version`.
 3. Run `whop auth status --format json`.
 4. Confirm the selected business with `whop auth account --list true --format json`.
 5. Run `omarchy plugin validate <plugin-directory>`.
 6. Run `./scripts/test.sh` in the source checkout, or run `qmllint` with an import root that mirrors Omarchy's `qs/Ui` and `qs/Commons` modules.
-7. Check `omarchy plugin list --json` for `local.omwhop`.
+7. Check `omarchy plugin list --json` for `io.github.b3sp0k3.omwhop`.
 8. Check Quickshell logs for QML or process errors.
 
 ## IPC contract
 
-The plugin exposes `local.omwhop` with read-only lifecycle methods:
+The plugin exposes `io.github.b3sp0k3.omwhop` with read-only lifecycle methods:
 
 - `open`, `close`, `show`, `hide`, `toggle`
 - `refresh`

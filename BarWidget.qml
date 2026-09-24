@@ -7,7 +7,7 @@ import "Model.js" as Model
 
 BarWidget {
   id: root
-  moduleName: "local.omwhop"
+  moduleName: "io.github.b3sp0k3.omwhop"
 
   property var whopState: Model.emptyState()
   property bool refreshing: false
@@ -114,7 +114,7 @@ BarWidget {
   }
 
   IpcHandler {
-    target: "local.omwhop"
+    target: "io.github.b3sp0k3.omwhop"
 
     function refresh(): void { root.refresh() }
     function open(): void { root.open() }

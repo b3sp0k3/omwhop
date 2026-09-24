@@ -1,5 +1,8 @@
 # OmWhop
 
+[![CI](https://github.com/b3sp0k3/omwhop/actions/workflows/ci.yml/badge.svg)](https://github.com/b3sp0k3/omwhop/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 OmWhop is a read-only Whop status widget for the [Omarchy](https://omarchy.org/) shell. It uses the official `whop` CLI as its data source and does not replace or rewrite Whop's CLI.
 
 The first release provides:
@@ -30,10 +33,25 @@ For a local checkout, use the full installer:
 ./install.sh
 ```
 
-For a published repository, install the Omarchy plugin through Omarchy's supported Git flow instead:
+For the published repository, install the Omarchy plugin through Omarchy's supported Git flow:
 
 ```bash
-omarchy plugin add https://github.com/<owner>/omwhop.git --enable
+omarchy plugin add https://github.com/b3sp0k3/omwhop.git --enable
+```
+
+Plugin-only installation does not install the Whop CLI or either agent skill. Install those separately when needed:
+
+```bash
+curl -fsSL https://whop.com/install.sh | sh
+whop skills add
+```
+
+For the complete setup, clone the repository and run the bundled installer:
+
+```bash
+git clone https://github.com/b3sp0k3/omwhop.git
+cd omwhop
+./install.sh
 ```
 
 The full local installer is safe to rerun. It:
@@ -41,7 +59,7 @@ The full local installer is safe to rerun. It:
 1. Installs the official Whop CLI with `https://whop.com/install.sh` when needed.
 2. Runs `whop skills add` to install or refresh Whop's official agent skill.
 3. Installs the small `omwhop` integration skill under `~/.agents/skills/omwhop`.
-4. Validates and installs the plugin under `~/.config/omarchy/plugins/local.omwhop`.
+4. Validates and installs the plugin under `~/.config/omarchy/plugins/io.github.b3sp0k3.omwhop`.
 5. Enables the bar widget in the right section and asks the running shell to rescan plugins.
 6. Stores replacement backups under `${XDG_STATE_HOME:-~/.local/state}/omwhop/backups`, outside directories scanned for plugins or skills.
 
@@ -60,6 +78,7 @@ Install selected stages only:
 ./install.sh --skip-omwhop-skill
 ./install.sh --no-enable
 ./install.sh --placement center
+./install.sh --keep-legacy
 ```
 
 Use `./install.sh --help` for the complete option list.
@@ -80,7 +99,7 @@ Open the emitted authorization URL in the browser when requested. OmWhop never h
 OmWhop follows the [Omarchy plugin development guide](https://plugins.omarchy.org/develop.html) and the installed Quattro shell reference:
 
 - `manifest.json` is at the repository root and declares only the `bar-widget` kind.
-- The ID is namespaced (`local.omwhop`) and does not use the reserved `omarchy.*` namespace.
+- The ID is permanently namespaced (`io.github.b3sp0k3.omwhop`) and does not use the reserved `omarchy.*` namespace.
 - `entryPoints.barWidget` points to `BarWidget.qml`.
 - `BarWidget.qml` loads `Panel.qml` internally; the nested panel is not declared as a second plugin kind.
 - Both QML files use the same `moduleName`.
@@ -89,7 +108,15 @@ OmWhop follows the [Omarchy plugin development guide](https://plugins.omarchy.or
 - The plugin declares `MIT` licensing, includes this README and `LICENSE`, and has no symlinks.
 - No second Quickshell process, privileged operation, network listener, or packaged Omarchy modification is used.
 
-The local installer stages copies outside the live plugin directory, removes source `.git` metadata, validates the checkout, then moves it into the user-owned plugin directory and enables it through Omarchy IPC. Staging and backups remain outside plugin and skill discovery directories, preventing partial copies or old versions from being rediscovered. It does not modify `/usr/share/omarchy/`. A published checkout should use `omarchy plugin add <git-url> --enable`, which performs the supported clone, validation, rediscovery, and enable flow.
+The local installer stages copies outside the live plugin directory, removes source `.git` metadata, validates the checkout, then moves it into the user-owned plugin directory and enables it through Omarchy IPC. Staging and backups remain outside plugin and skill discovery directories, preventing partial copies or old versions from being rediscovered. It does not modify `/usr/share/omarchy/`. Published users should prefer `omarchy plugin add https://github.com/b3sp0k3/omwhop.git --enable`, which keeps the plugin Git-managed and supports `omarchy plugin update`.
+
+### Migrating from the pre-release ID
+
+Earlier development installations used `local.omwhop`. The full installer enables the permanent plugin first and then removes the superseded pre-release plugin through `omarchy plugin remove`. Use `--keep-legacy` to retain it temporarily, or remove it manually after confirming the permanent widget works:
+
+```bash
+omarchy plugin remove local.omwhop --yes
+```
 
 ## Security and mutation boundary
 
@@ -121,7 +148,7 @@ The test script checks:
 - Installed or missing Whop CLI handling
 - The guide's `bar-widget` manifest contract and MIT declaration
 - Shared `moduleName` and required panel lifecycle forwarding
-- Exactly one `local.omwhop` IPC target
+- Exactly one `io.github.b3sp0k3.omwhop` IPC target
 - The official Omarchy manifest validator
 - QML syntax against the installed `qs.Ui` and `qs.Commons` modules
 
@@ -141,14 +168,14 @@ After installation, verify discovery and enabled state as described by Omarchy:
 
 ```bash
 omarchy plugin list --json \
-  | jq --arg id "local.omwhop" '.[] | select(.id == $id)'
+  | jq --arg id "io.github.b3sp0k3.omwhop" '.[] | select(.id == $id)'
 ```
 
 Exercise the same bar-widget routes Quattro uses:
 
 ```bash
-omarchy-shell shell summon local.omwhop '{}'
-omarchy-shell shell hide local.omwhop
+omarchy-shell shell summon io.github.b3sp0k3.omwhop '{}'
+omarchy-shell shell hide io.github.b3sp0k3.omwhop
 ```
 
 Before publishing, also test pointer click, Escape, disable, re-enable, shell restart, and removal. Runtime errors are available from:
@@ -162,7 +189,7 @@ qs log -p "$OMARCHY_PATH/shell" --tail 100
 Disable and remove the plugin:
 
 ```bash
-omarchy plugin remove local.omwhop --yes
+omarchy plugin remove io.github.b3sp0k3.omwhop --yes
 ```
 
 Remove the integration skill manually if desired:
@@ -181,12 +208,30 @@ omwhop/
 ├── BarWidget.qml          # Bar icon, panel lifecycle, adapter process
 ├── Panel.qml              # Read-only status and safe actions
 ├── Model.js               # JSON parsing and display helpers
-├── install.sh             # Idempotent dual installer
+├── install.sh             # Idempotent full installer and legacy migration
+├── CHANGELOG.md           # Release history
+├── SECURITY.md            # Security boundary and reporting
 ├── scripts/
 │   ├── omwhop             # Allow-listed Python CLI adapter
+│   ├── package.sh         # Deterministic release archive and checksum
+│   ├── scan-secrets.sh    # Tracked-content secret scan
 │   └── test.sh            # Local validation suite
 └── skill/omwhop/SKILL.md  # OmWhop-specific agent guidance
 ```
+
+## Release
+
+The first public release is `v0.1.0`. Release archives are deterministic and include a SHA-256 checksum:
+
+```bash
+./scripts/package.sh 0.1.0
+sha256sum --check dist/omwhop-v0.1.0.tar.gz.sha256
+```
+
+GitHub releases attach:
+
+- `omwhop-v0.1.0.tar.gz`
+- `omwhop-v0.1.0.tar.gz.sha256`
 
 ## References
 
@@ -194,3 +239,5 @@ omwhop/
 - [Develop a custom Omarchy plugin](https://plugins.omarchy.org/develop.html)
 - [Whop CLI installer](https://whop.com/install.sh)
 - [Whop Agent Mode](https://docs.whop.com/cli/agent-mode)
+- [Security policy](SECURITY.md)
+- [Changelog](CHANGELOG.md)

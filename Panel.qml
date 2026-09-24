@@ -6,7 +6,7 @@ import "Model.js" as Model
 
 Panel {
   id: root
-  moduleName: "local.omwhop"
+  moduleName: "io.github.b3sp0k3.omwhop"
   manageIpc: false
 
   property var anchorItem: null

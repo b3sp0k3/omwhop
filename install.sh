@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PLUGIN_ID="local.omwhop"
+PLUGIN_ID="io.github.b3sp0k3.omwhop"
+LEGACY_PLUGIN_ID="local.omwhop"
+REPOSITORY_URL="${OMWHOP_REPOSITORY_URL:-https://github.com/b3sp0k3/omwhop.git}"
 WHOP_INSTALLER_URL="${OMWHOP_WHOP_INSTALLER_URL:-https://whop.com/install.sh}"
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DEST="${OMWHOP_PLUGIN_DEST:-$HOME/.config/omarchy/plugins/$PLUGIN_ID}"
@@ -14,6 +16,7 @@ SKIP_WHOP_SKILL=0
 SKIP_PLUGIN=0
 SKIP_OMWHOP_SKILL=0
 NO_ENABLE=0
+KEEP_LEGACY=0
 DRY_RUN=0
 PLACEMENT="right"
 
@@ -32,9 +35,11 @@ Options:
   --no-enable             Install the plugin but do not add it to the bar
   --placement SECTION     Bar placement: left, center, or right (default: right)
   --dry-run               Print actions without changing files or configuration
+  --keep-legacy           Keep a detected local.omwhop installation after migration
   -h, --help              Show this help
 
 Environment overrides:
+  OMWHOP_REPOSITORY_URL   Git URL used by the published plugin flow
   OMWHOP_PLUGIN_DEST      Plugin destination directory
   OMWHOP_SKILL_DEST       OmWhop skill destination directory
   OMWHOP_BACKUP_ROOT      Backup root outside discovery directories
@@ -50,6 +55,7 @@ while (($#)); do
     --skip-plugin) SKIP_PLUGIN=1 ;;
     --skip-omwhop-skill) SKIP_OMWHOP_SKILL=1 ;;
     --no-enable) NO_ENABLE=1 ;;
+    --keep-legacy) KEEP_LEGACY=1 ;;
     --placement)
       [[ $# -ge 2 ]] || { echo "error: --placement requires a value" >&2; exit 2; }
       PLACEMENT="$2"
@@ -191,6 +197,41 @@ install_plugin() {
   fi
 }
 
+migrate_legacy_plugin() {
+  local legacy_dest="$HOME/.config/omarchy/plugins/$LEGACY_PLUGIN_ID"
+  local shell_config="$HOME/.config/omarchy/shell.json"
+
+  if [[ ! -e "$legacy_dest" && ! -L "$legacy_dest" ]]; then
+    return
+  fi
+
+  log "Detected pre-release plugin $LEGACY_PLUGIN_ID"
+  if ((KEEP_LEGACY)); then
+    log "Keeping $LEGACY_PLUGIN_ID; disable or remove it manually to avoid duplicate widgets"
+    return
+  fi
+
+  if ((DRY_RUN)); then
+    printf '    $ omarchy plugin remove %q --yes\n' "$LEGACY_PLUGIN_ID"
+    return
+  fi
+
+  if ! command -v omarchy >/dev/null 2>&1; then
+    log "Omarchy is unavailable; keeping $LEGACY_PLUGIN_ID for manual migration"
+    return
+  fi
+
+  if [[ -f "$shell_config" ]] && command -v jq >/dev/null 2>&1; then
+    if ! jq -e --arg id "$PLUGIN_ID" '.bar.layout | to_entries | any(.value[]?; .id == $id)' "$shell_config" >/dev/null 2>&1; then
+      log "Permanent plugin is not enabled yet; keeping $LEGACY_PLUGIN_ID until migration completes"
+      return
+    fi
+  fi
+
+  log "Removing the superseded $LEGACY_PLUGIN_ID plugin"
+  omarchy plugin remove "$LEGACY_PLUGIN_ID" --yes
+}
+
 install_omwhop_skill() {
   if ((SKIP_OMWHOP_SKILL)); then
     log "Skipping the OmWhop integration skill"
@@ -210,6 +251,7 @@ install_cli
 install_whop_skill
 install_omwhop_skill
 install_plugin
+migrate_legacy_plugin
 
 log "OmWhop installation complete"
 cat <<'EOF'
@@ -218,6 +260,7 @@ Next steps:
   1. If Whop is not signed in:  whop login --method oauth --format jsonl
   2. If no business is selected: whop quickstart
   3. Click the OmWhop bar icon to open the panel.
+  4. Update later with:         omarchy plugin update io.github.b3sp0k3.omwhop
 
 OmWhop is read-only in this release. Use the official Whop CLI or agent skill
 for business changes.
