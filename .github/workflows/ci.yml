@@ -55,4 +55,4 @@ jobs:
         run: ./scripts/scan-secrets.sh
 
       - name: Check whitespace
-        run: git diff --check HEAD^
+        run: git diff --check HEAD
