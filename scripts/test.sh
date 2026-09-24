@@ -25,6 +25,10 @@ pass "adapter Python syntax"
 "$ROOT/scripts/omwhop" --help >/dev/null
 pass "adapter CLI"
 
+ipc_targets="$(grep -R --include='*.qml' -c 'target: "local.omwhop"' "$ROOT" | awk -F: '{ total += $2 } END { print total + 0 }')"
+[[ "$ipc_targets" -eq 1 ]] || fail "expected exactly one local.omwhop IpcHandler, found $ipc_targets"
+pass "single IPC target"
+
 adapter_output="$($ROOT/scripts/omwhop status)"
 jq -e '
   .schemaVersion == 1 and

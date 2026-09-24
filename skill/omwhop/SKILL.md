@@ -39,7 +39,7 @@ Omarchy bar
 
 ## Troubleshooting order
 
-1. Run `omwhop status` directly and inspect its normalized JSON.
+1. Run `~/.config/omarchy/plugins/local.omwhop/scripts/omwhop status` directly and inspect its normalized JSON.
 2. Run `command -v whop && whop --version`.
 3. Run `whop auth status --format json`.
 4. Confirm the selected business with `whop auth account --list true --format json`.
