@@ -88,7 +88,7 @@ OmWhop follows the [Omarchy plugin development guide](https://plugins.omarchy.or
 - The plugin declares `MIT` licensing, includes this README and `LICENSE`, and has no symlinks.
 - No second Quickshell process, privileged operation, network listener, or packaged Omarchy modification is used.
 
-The local installer copies the checkout into the user-owned plugin directory and enables it through Omarchy IPC. It does not modify `/usr/share/omarchy/`. A published checkout should use `omarchy plugin add <git-url> --enable`, which performs the supported clone, validation, rediscovery, and enable flow.
+The local installer stages copies outside the live plugin directory, validates the checkout, then moves it into the user-owned plugin directory and enables it through Omarchy IPC. This prevents a partially copied folder from being discovered as a second plugin. It does not modify `/usr/share/omarchy/`. A published checkout should use `omarchy plugin add <git-url> --enable`, which performs the supported clone, validation, rediscovery, and enable flow.
 
 ## Security and mutation boundary
 

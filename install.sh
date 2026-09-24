@@ -84,11 +84,9 @@ copy_tree() {
   local source="$1"
   local destination="$2"
   local staging
-  staging="${destination}.tmp.$$"
+  staging="$(mktemp -d "${TMPDIR:-/tmp}/omwhop-stage.XXXXXX")"
 
   run mkdir -p "$(dirname -- "$destination")"
-  run rm -rf -- "$staging"
-  run mkdir -p -- "$staging"
   run cp -a -- "$source/." "$staging/"
 
   if [[ -e "$destination" || -L "$destination" ]]; then
