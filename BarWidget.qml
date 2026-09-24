@@ -58,7 +58,7 @@ BarWidget {
     if (panelLoader.item) panelLoader.item.close()
   }
 
-  function togglePanel() {
+  function toggle() {
     if (panelLoader.item) panelLoader.item.toggle()
   }
 
@@ -121,7 +121,7 @@ BarWidget {
     function close(): void { root.close() }
     function show(): void { root.open() }
     function hide(): void { root.close() }
-    function toggle(): void { root.togglePanel() }
+    function toggle(): void { root.toggle() }
     function status(): string { return root.statusJson }
   }
 
@@ -167,7 +167,7 @@ BarWidget {
 
     onPressed: function(buttonCode) {
       if (buttonCode === Qt.MiddleButton) root.refresh()
-      else root.togglePanel()
+      else root.toggle()
     }
   }
 }

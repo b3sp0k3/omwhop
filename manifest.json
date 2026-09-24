@@ -4,6 +4,7 @@
   "name": "OmWhop",
   "version": "0.1.0",
   "author": "OmWhop contributors",
+  "license": "MIT",
   "description": "Read-only Whop business status and recommendations for the Omarchy bar",
   "kinds": [
     "bar-widget"

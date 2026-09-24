@@ -24,13 +24,19 @@ The Whop CLI is installed to `~/.local/bin` by Whop's official installer. No `su
 
 ## Install
 
-From this repository:
+For a local checkout, use the full installer:
 
 ```bash
 ./install.sh
 ```
 
-The installer is safe to rerun. It:
+For a published repository, install the Omarchy plugin through Omarchy's supported Git flow instead:
+
+```bash
+omarchy plugin add https://github.com/<owner>/omwhop.git --enable
+```
+
+The full local installer is safe to rerun. It:
 
 1. Installs the official Whop CLI with `https://whop.com/install.sh` when needed.
 2. Runs `whop skills add` to install or refresh Whop's official agent skill.
@@ -68,6 +74,22 @@ whop quickstart
 
 Open the emitted authorization URL in the browser when requested. OmWhop never handles OAuth secrets.
 
+## Omarchy plugin contract
+
+OmWhop follows the [Omarchy plugin development guide](https://plugins.omarchy.org/develop.html) and the installed Quattro shell reference:
+
+- `manifest.json` is at the repository root and declares only the `bar-widget` kind.
+- The ID is namespaced (`local.omwhop`) and does not use the reserved `omarchy.*` namespace.
+- `entryPoints.barWidget` points to `BarWidget.qml`.
+- `BarWidget.qml` loads `Panel.qml` internally; the nested panel is not declared as a second plugin kind.
+- Both QML files use the same `moduleName`.
+- The bar entry point forwards `opened`, `open()`, `close()`, `toggle()`, and `closeForPopoutSwitch()` to the nested panel.
+- `KeyboardPanel` anchors to the bar button and `PanelKeyCatcher` handles Escape and panel switching.
+- The plugin declares `MIT` licensing, includes this README and `LICENSE`, and has no symlinks.
+- No second Quickshell process, privileged operation, network listener, or packaged Omarchy modification is used.
+
+The local installer copies the checkout into the user-owned plugin directory and enables it through Omarchy IPC. It does not modify `/usr/share/omarchy/`. A published checkout should use `omarchy plugin add <git-url> --enable`, which performs the supported clone, validation, rediscovery, and enable flow.
+
 ## Security and mutation boundary
 
 OmWhop is intentionally read-only in version 0.1.0. Its Python adapter invokes only these Whop reads:
@@ -96,8 +118,11 @@ The test script checks:
 - Python syntax and adapter CLI behavior
 - Normalized status JSON
 - Installed or missing Whop CLI handling
+- The guide's `bar-widget` manifest contract and MIT declaration
+- Shared `moduleName` and required panel lifecycle forwarding
+- Exactly one `local.omwhop` IPC target
 - The official Omarchy manifest validator
-- QML syntax with `qmllint -I "$OMARCHY_PATH/shell"`
+- QML syntax against the installed `qs.Ui` and `qs.Commons` modules
 
 To test a local plugin checkout without enabling it globally, validate it directly:
 
@@ -108,6 +133,28 @@ omarchy plugin validate .
 ```
 
 `qmllint` is included in Arch's `qt6-tools` package. This Omarchy image keeps its binary at `/usr/lib/qt6/bin/qmllint`, so the test script discovers both that path and a normal `qmllint` on `PATH`.
+
+## Runtime inspection and lifecycle checks
+
+After installation, verify discovery and enabled state as described by Omarchy:
+
+```bash
+omarchy plugin list --json \
+  | jq --arg id "local.omwhop" '.[] | select(.id == $id)'
+```
+
+Exercise the same bar-widget routes Quattro uses:
+
+```bash
+omarchy-shell shell summon local.omwhop '{}'
+omarchy-shell shell hide local.omwhop
+```
+
+Before publishing, also test pointer click, Escape, disable, re-enable, shell restart, and removal. Runtime errors are available from:
+
+```bash
+qs log -p "$OMARCHY_PATH/shell" --tail 100
+```
 
 ## Uninstall
 

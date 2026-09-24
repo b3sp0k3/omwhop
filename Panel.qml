@@ -7,7 +7,6 @@ import "Model.js" as Model
 Panel {
   id: root
   moduleName: "local.omwhop"
-  ipcTarget: "local.omwhop"
   manageIpc: false
 
   property var anchorItem: null
@@ -82,7 +81,6 @@ Panel {
     owner: root.barIdentity
     bar: root.bar
     open: root.opened
-    centerOnBar: true
     focusTarget: keyCatcher
     contentWidth: panel.fittedContentWidth(Style.space(440))
     contentHeight: panel.fittedContentHeight(column.implicitHeight, Style.space(620))

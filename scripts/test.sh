@@ -25,6 +25,27 @@ pass "adapter Python syntax"
 "$ROOT/scripts/omwhop" --help >/dev/null
 pass "adapter CLI"
 
+jq -e '
+  .schemaVersion == 1 and
+  .id == "local.omwhop" and
+  .license == "MIT" and
+  .kinds == ["bar-widget"] and
+  .entryPoints.barWidget == "BarWidget.qml" and
+  .barWidget.allowMultiple == false and
+  .barWidget.defaultSection == "right"
+' "$ROOT/manifest.json" >/dev/null || fail "manifest does not satisfy the Omarchy bar-widget development contract"
+pass "Omarchy bar-widget manifest contract"
+
+module_names="$(grep -h 'moduleName: "local.omwhop"' "$ROOT/BarWidget.qml" "$ROOT/Panel.qml" | wc -l)"
+[[ "$module_names" -eq 2 ]] || fail "BarWidget.qml and Panel.qml must share moduleName local.omwhop"
+pass "shared bar-widget module identity"
+
+for lifecycle in opened open close toggle closeForPopoutSwitch; do
+  grep -Eq "(property|function) (bool )?$lifecycle\\b|function $lifecycle\\(" "$ROOT/BarWidget.qml" \
+    || fail "BarWidget.qml does not forward the required $lifecycle lifecycle member"
+done
+pass "bar-widget panel lifecycle forwarding"
+
 ipc_targets="$(grep -R --include='*.qml' -c 'target: "local.omwhop"' "$ROOT" | awk -F: '{ total += $2 } END { print total + 0 }')"
 [[ "$ipc_targets" -eq 1 ]] || fail "expected exactly one local.omwhop IpcHandler, found $ipc_targets"
 pass "single IPC target"
